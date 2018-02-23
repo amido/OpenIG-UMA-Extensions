@@ -1,6 +1,6 @@
 # OpenIG-UMA-Extensions
 
-[OpenIG-UMA implementation has some limitations](https://backstage.forgerock.com/docs/ig/5/gateway-guide#uma-limitations); this extension cover some of these limitations. <br />
+[OpenIG-UMA implementation has some limitations](https://backstage.forgerock.com/docs/ig/5.5/gateway-guide#uma-limitations); this extension cover some of these limitations. <br />
 
 OpenIG UMA Service and Filter Extensions for: <br />
 1. Realm support <br />
@@ -16,16 +16,16 @@ These features are not currently supported in this extension: <br />
 
 Pre-requisites :
 ================
-* Versions used for this project: IG 5.0, AM 5.1, DS 4.0
+* Versions used for this project: IG 5.5, AM 5.5, DS 5.5
 1. OpenAM has been installed and configured. Sample routes in this example use OpenAM realm '/employees'. 
-2. OpenAM UMA service has been configured as specified [here](https://backstage.forgerock.com/docs/am/5.1/uma-guide)
-3. OpenIG has been installed and configured as UMA RS as specified [here](https://backstage.forgerock.com/docs/ig/5/gateway-guide#chap-uma)  
+2. OpenAM UMA service has been configured as specified [here](https://backstage.forgerock.com/docs/am/5.5/uma-guide)
+3. OpenIG has been installed and configured as UMA RS as specified [here](https://backstage.forgerock.com/docs/ig/5.5/gateway-guide#chap-uma)  
 4. Maven has been installed and configured.
 
 
 OpenDJ UMA RS store Installation & Configuration:
 =================================================
-1. Install OpenDJ under /opt/opendjrs. Refer [here](https://backstage.forgerock.com/docs/ds/5/install-guide#chap-setup-ds) <br />
+1. Install OpenDJ under /opt/opendjrs. Refer [here](https://backstage.forgerock.com/docs/ds/5.5/install-guide#chap-setup-ds) <br />
    Setup params: <br />
    ============= <br />
    * Root User DN:                  cn=Directory Manager
