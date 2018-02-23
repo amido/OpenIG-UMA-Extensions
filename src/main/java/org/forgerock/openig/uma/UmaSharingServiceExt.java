@@ -58,11 +58,10 @@ import static org.forgerock.util.promise.Promises.newExceptionPromise;
 /**
  * An {@link UmaSharingService} provides core UMA features to OpenIG when acting as an UMA Resource Server.
  * <p>
- * <p>It is linked to a single UMA Authorization Server and needs to be pre-registered as an OAuth 2.0 client on that
- * AS.
+ * <p>It is linked to a single UMA Authorization Server.
  * <p>
  * <p>It is also the place where protected application knowledge is described: each item of the {@code resources}
- * array describe a resource set (that can be composed of multiple endpoints) that share the same set of scopes.
+ * array describe a resource  (that can be composed of multiple endpoints) that share the same set of scopes.
  * <p>
  * <p>Each resource contains a {@code pattern} used to define which one of them to use when a {@link Share} is
  * {@linkplain #createShare(Context, CreateRequest, String) created}. A resource also contains a list of {@code actions} that
@@ -76,8 +75,6 @@ import static org.forgerock.util.promise.Promises.newExceptionPromise;
  *               "protectionApiHandler": "ClientHandler",
  *               "authorizationServerUri": "http://openam51.example.com:8282/openam",
  *               "realm": "/employees",
- *               "clientId": "OpenIG_RS",
- *               "clientSecret": "password",
  *               "ldapHost": "192.168.56.122",
  *               "ldapPort": 3389,
  *               "ldapAdminId": "cn=Directory Manager",
@@ -97,8 +94,8 @@ public class UmaSharingServiceExt {
     private final Handler protectionApiHandler;
     private final URI authorizationServer;
     private final URI introspectionEndpoint;
-    private final URI ticketEndpoint;
-    private final URI resourceSetEndpoint;
+    private final URI permissionEndpoint;
+    private final URI resourceRegistrationEndpoint;
     private final String clientId;
     private final String clientSecret;
     private final String realm;
@@ -109,11 +106,11 @@ public class UmaSharingServiceExt {
      * Constructs an UmaSharingService bound to the given {@code authorizationServer} and dedicated to protect resource
      * sets described by the given {@code templates}.
      *
-     * @param protectionApiHandler   used to call the resource set endpoint
+     * @param protectionApiHandler   used to call the resource registration endpoint
      * @param authorizationServerURI Bound UMA Authorization Server
      * @param clientId               OAuth 2.0 Client identifier
      * @param clientSecret           OAuth 2.0 Client secret
-     * @throws URISyntaxException when the authorization server URI cannot be "normalized" (trailing '/' append if required)
+//     * @throws URISyntaxException when the authorization server URI cannot be "normalized" (trailing '/' append if required)
      */
     public UmaSharingServiceExt(final Handler protectionApiHandler,
                                 String realm,
@@ -123,13 +120,13 @@ public class UmaSharingServiceExt {
                                 final LDAPManager ldapManager)
             throws URISyntaxException {
         this.protectionApiHandler = protectionApiHandler;
-        this.authorizationServer = appendTrailingSlash(authorizationServerURI);
-        // TODO Should find theses values looking at the .well-known/uma-configuration endpoint
+        this.authorizationServer = authorizationServerURI;
+        // TODO Should find theses values looking at the .well-known/uma2-configuration endpoint
 
         this.realm = realm;
         this.introspectionEndpoint = authorizationServer.resolve("oauth2" + realm + "/introspect");
-        this.ticketEndpoint = authorizationServer.resolve("uma" + realm + "/permission_request");
-        this.resourceSetEndpoint = authorizationServer.resolve("oauth2" + realm + "/resource_set");
+        this.permissionEndpoint = authorizationServer.resolve("uma" + realm + "/permission_request");
+        this.resourceRegistrationEndpoint = authorizationServer.resolve("uma" + realm + "/resource_set");
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.ldapManager = ldapManager;
@@ -157,8 +154,8 @@ public class UmaSharingServiceExt {
      * @param context       Context chain used to keep a relationship between requests (tracking)
      * @param createRequest CreateRequest
      * @return the created {@link Share} asynchronously
-     * @see <a href="https://docs.kantarainitiative.org/uma/draft-oauth-resource-reg.html#rfc.section.2">Resource Set
-     * Registration</a>
+     * @see <a href="https://docs.kantarainitiative.org/uma/ed/oauth-uma-federated-authz-2.0-06.html#create-rreg">
+     *     Create Resource Description</a>
      */
     public Promise<ShareExt, UmaException> createShare(final Context context,
                                                        final CreateRequest createRequest, final String userId) {
@@ -170,21 +167,26 @@ public class UmaSharingServiceExt {
         final String pat = OAuth2.getBearerAccessToken(((HttpContext) context.getParent()).getHeaderAsString("Authorization"));
 
         if (isShared(name, uri, userId)) {
-            // We do not accept re-sharing or post-creation resource_set configuration
+            // We do not accept re-sharing or post-creation resource configuration
             return newExceptionPromise(new UmaException(format("Share already exists with similar name: %s or uri: %s ", name, uri)));
         }
 
-        return createResourceSet(context, pat, resourceSet(name, scopes, type))
+        return createResource(context, pat, resourceSet(name, scopes, type))
                 .then(new Function<Response, ShareExt, UmaException>() {
                     @Override
                     public ShareExt apply(final Response response) throws UmaException {
                         if (response.getStatus() == Status.CREATED) {
+                            String resource_id = null;
                             try {
                                 JsonValue value = json(response.getEntity().getJson());
-                                ShareExt share = new ShareExt(value.get("_id").asString(), name, pat, uri, value.get("user_access_policy_uri").asString(), userId, realm, clientId);
+                                resource_id = value.get("_id").asString();
+                                ShareExt share = new ShareExt(resource_id, name, pat, uri, value.get("user_access_policy_uri").asString(), userId, realm, clientId);
                                 ldapManager.addShare(share);
                                 return share;
                             } catch (IOException e) {
+                                if (resource_id !=null) {
+                                    deleteResource(context, pat, resource_id);
+                                }
                                 throw new UmaException("Cannot register resource_set in OpenIG LDAP", e);
                             }
                         }
@@ -222,12 +224,12 @@ public class UmaSharingServiceExt {
         return false;
     }
 
-    private Promise<Response, NeverThrowsException> createResourceSet(final Context context,
+    private Promise<Response, NeverThrowsException> createResource(final Context context,
                                                                       final String pat,
                                                                       final JsonValue data) {
         Request request = new Request();
         request.setMethod("POST");
-        request.setUri(resourceSetEndpoint);
+        request.setUri(resourceRegistrationEndpoint);
         request.getHeaders().put("Authorization", format("Bearer %s", pat));
         request.getHeaders().put("Accept", "application/json");
 
@@ -236,9 +238,21 @@ public class UmaSharingServiceExt {
         return protectionApiHandler.handle(context, request);
     }
 
+    private Promise<Response, NeverThrowsException> deleteResource(final Context context,
+                                                                      final String pat,
+                                                                      final String resource_id) {
+
+        Request request = new Request();
+        request.setMethod("DELETE");
+        request.setUri(authorizationServer.resolve(resourceRegistrationEndpoint.toString() + "/" + resource_id));
+        request.getHeaders().put("Authorization", format("Bearer %s", pat));
+
+        return protectionApiHandler.handle(context, request);
+    }
+
     private JsonValue resourceSet(final String name, final List<Object> scopes, final String type) {
         return json(object(field("name", name),
-                field("scopes", scopes), field("type", type)));
+                field("resource_scopes", scopes), field("type", type)));
     }
 
     /**
@@ -348,8 +362,8 @@ public class UmaSharingServiceExt {
      *
      * @return the UMA Permission Request endpoint Uri.
      */
-    public URI getTicketEndpoint() {
-        return ticketEndpoint;
+    public URI getPermissionEndpoint() {
+        return permissionEndpoint;
     }
 
     /**

@@ -25,9 +25,9 @@
     <name>OpenIG UMA Extensions</name>
 
     <properties>
-        <openig.version>5.0.1-SNAPSHOT</openig.version>
-        <opendj.sdk.version>4.0.0</opendj.sdk.version>
-        <commons.version>21.0.0</commons.version>
+        <openig.version>5.5.0</openig.version>
+        <opendj.sdk.version>5.5.0</opendj.sdk.version>
+        <commons.version>22.0.0</commons.version>
     </properties>
 
     <repositories>

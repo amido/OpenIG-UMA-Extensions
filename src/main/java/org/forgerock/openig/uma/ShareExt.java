@@ -25,7 +25,7 @@ import java.util.UUID;
 public class ShareExt {
 
     private String id;
-    private String resourceSetId;
+    private String resourceId;
     private String resourceName;
     private String PAT;
     private String requestURI;
@@ -63,7 +63,7 @@ public class ShareExt {
     /**
      * Creates ShareExt instance
      *
-     * @param resourceSetId
+     * @param resourceId
      * @param PAT
      * @param requestURI
      * @param policyURI
@@ -71,9 +71,9 @@ public class ShareExt {
      * @param userId
      * @param clientId
      */
-    public ShareExt(String resourceSetId, String resourceName, String PAT, String requestURI, String policyURI, String userId, String realm, String clientId) {
+    public ShareExt(String resourceId, String resourceName, String PAT, String requestURI, String policyURI, String userId, String realm, String clientId) {
         this.id = UUID.randomUUID().toString();
-        this.resourceSetId = resourceSetId;
+        this.resourceId = resourceId;
         this.resourceName = resourceName;
         this.PAT = PAT;
         this.requestURI = requestURI;
@@ -91,12 +91,12 @@ public class ShareExt {
         this.id = id;
     }
 
-    public String getResourceSetId() {
-        return resourceSetId;
+    public String getResourceId() {
+        return resourceId;
     }
 
-    public void setResourceSetId(String resourceSetId) {
-        this.resourceSetId = resourceSetId;
+    public void setResourceId(String resourceSetId) {
+        this.resourceId = resourceSetId;
     }
 
     public String getPAT() {

@@ -146,36 +146,37 @@ public class UmaResourceServerFilterExt implements Filter {
      * @param share    represents protection information about the requested resource
      * @param incoming request used to infer the set of permissions to ask
      * @return an asynchronous {@link Response}
-     * @see <a href="https://docs.kantarainitiative.org/uma/draft-uma-core-v1_0_1.html#rfc.section.3.2">Request
-     * Permission Registration</a>
+     * @see <a href="https://docs.kantarainitiative.org/uma/ed/oauth-uma-federated-authz-2.0-06.html#permission-endpoint">
+     * Permission Endpoint</a>
      */
     private Promise<Response, NeverThrowsException> ticket(final Context context,
                                                            final ShareExt share,
                                                            final Request incoming) {
         Request request = new Request();
         request.setMethod("POST");
-        request.setUri(umaService.getTicketEndpoint());
+        request.setUri(umaService.getPermissionEndpoint());
         request.getHeaders().put("Authorization", format("Bearer %s", share.getPAT()));
         request.getHeaders().put("Accept", "application/json");
         request.setEntity(createPermissionRequest(share, incoming).asMap());
 
         return protectionApiHandler.handle(context, request)
+                .thenAlways(request::close)
                 .then(new TicketResponseFunction());
     }
 
     /**
-     * Builds the resource set registration {@link Request}'s JSON content.
+     * Builds the resource registration {@link Request}'s JSON content.
      *
      * @param share   represents protection information about the requested resource
      * @param request request used to infer the set of permissions to ask
      * @return a JSON structure that represents a resource set registration
-     * @see <a href="https://docs.kantarainitiative.org/uma/draft-oauth-resource-reg-v1_0_1.html#resource-set-desc">
-     * Resource Set Descriptions</a>
+     * @see <a href="https://docs.kantarainitiative.org/uma/ed/oauth-uma-federated-authz-2.0-06.html#permission-endpoint">
+     * Permission Endpoint</a>
      */
     private JsonValue createPermissionRequest(final ShareExt share, final Request request) {
 
-        return json(object(field("resource_set_id", share.getResourceSetId()),
-                field("scopes", array(scopes.toArray(new Object[scopes.size()])))));
+        return json(object(field("resource_id", share.getResourceId()),
+                field("resource_scopes", array(scopes.toArray(new Object[scopes.size()])))));
     }
 
     private Promise<Response, NeverThrowsException> introspectToken(final Context context,
@@ -183,17 +184,15 @@ public class UmaResourceServerFilterExt implements Filter {
                                                                     final String pat) {
         Request request = new Request();
         request.setUri(umaService.getIntrospectionEndpoint());
-        // Should accept a PAT as per the spec (See OPENAM-6320 / OPENAM-5928)
-        //request.getHeaders().put("Authorization", format("Bearer %s", pat));
+        request.getHeaders().put("Authorization", format("Bearer %s", pat));
         request.getHeaders().put("Accept", "application/json");
 
         Form query = new Form();
         query.putSingle("token", token);
-        query.putSingle("client_id", umaService.getClientId());
-        query.putSingle("client_secret", umaService.getClientSecret());
         query.toRequestEntity(request);
 
-        return protectionApiHandler.handle(context, request);
+        return protectionApiHandler.handle(context, request)
+                                   .thenAlways(request::close);
     }
 
     /**
@@ -244,7 +243,7 @@ public class UmaResourceServerFilterExt implements Filter {
                     // Got a valid token
                     // Need to verify embed scopes against required scopes
 
-                    if (getScopes(value, share.getResourceSetId()).containsAll(scopes)) {
+                    if (getScopes(value, share.getResourceId()).containsAll(scopes)) {
                         // All required scopes are present, continue the request processing
                         return next.handle(context, request);
                     }
@@ -273,10 +272,10 @@ public class UmaResourceServerFilterExt implements Filter {
             return ticket(context, share, request);
         }
 
-        private List<String> getScopes(final JsonValue value, final String resourceSetId) {
+        private List<String> getScopes(final JsonValue value, final String resourceId) {
             for (JsonValue permission : value.get("permissions")) {
-                if (resourceSetId.equals(permission.get("resource_set_id").asString())) {
-                    return permission.get("scopes").asList(String.class);
+                if (resourceId.equals(permission.get("resource_id").asString())) {
+                    return permission.get("resource_scopes").asList(String.class);
                 }
             }
             return Collections.emptyList();
@@ -291,14 +290,14 @@ public class UmaResourceServerFilterExt implements Filter {
                     // Create a new response with authenticate header and status code
                     try {
                         JsonValue value = json(response.getEntity().getJson());
-                        Response forbidden = new Response(Status.UNAUTHORIZED);
+                        Response unauthorized = new Response(Status.UNAUTHORIZED);
                         String ticket = value.get("ticket").asString();
-                        forbidden.getHeaders().put("WWW-Authenticate",
+                        unauthorized.getHeaders().put("WWW-Authenticate",
                                 format("UMA realm=\"%s\", as_uri=\"%s\", ticket=\"%s\"",
                                         realm,
                                         umaService.getAuthorizationServer(),
                                         ticket));
-                        return forbidden;
+                        return unauthorized;
                     } catch (IOException e) {
                         // JSON parsing exception
                         // Do not process them here, handle them in the later catch-all block
@@ -307,7 +306,7 @@ public class UmaResourceServerFilterExt implements Filter {
                 } else {
                     logger.debug("Got a {} Response from '{}', was expecting a 201 Created.",
                             response.getStatus(),
-                            umaService.getTicketEndpoint());
+                            umaService.getPermissionEndpoint());
                 }
 
                 // Properly handle 400 errors and UMA error codes

@@ -76,7 +76,7 @@ class ShareCollectionProviderExt implements CollectionResourceProvider {
                 field("resourceURI", share.getRequestURI()),
                 field("user_access_policy_uri", share.getPolicyURI()),
                 field("pat", share.getPAT()),
-                field("resource_set_id", share.getResourceSetId()),
+                field("resource_id", share.getResourceId()),
                 field("userId", share.getUserId()),
                 field("realm", share.getRealm()),
                 field("client_id", share.getClientId())));

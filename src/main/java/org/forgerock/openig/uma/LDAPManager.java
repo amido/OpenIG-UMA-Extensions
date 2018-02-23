@@ -63,7 +63,7 @@ public class LDAPManager {
             Entry entry = new LinkedHashMapEntry(entryDN)
                     .addAttribute("objectclass", "top")
                     .addAttribute("objectclass", "frUmaRS")
-                    .addAttribute("umaResourceSetId", share.getResourceSetId())
+                    .addAttribute("umaResourceSetId", share.getResourceId())
                     .addAttribute("umaResourceURI", share.getRequestURI())
                     .addAttribute("umaResourceName", share.getResourceName())
                     .addAttribute("umaResoucePAT", share.getPAT())
