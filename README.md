@@ -149,7 +149,7 @@ OpenIG-UMA REST endpoints:
 ==========================
 All below REST endpoints require valid PAT in Authorization header. 
  
-* Create share. UMA shares need to have unique uri and name. Note that this restriction is per uid per realm per OAuth Client. In other words if user with uid 'alice' (in realm /employees and and using OAuth Client: OpenIG_RS) has created UMA share with name: TxHistory and uri: /history/emp1, then she can't create share with name: TxHistory and uri /history/emp2 (or name: TxHistory2 and uri /history/emp1) but alice in /customer realm can create such share.
+* Create share. UMA shares need to have unique uri and name. Note that this restriction is per uid per realm per OAuth Client. In other words if user with uid 'alice' (in realm /employees and and using OAuth Client: OpenIG_RS) has created UMA share with name: TxHistory and uri: /history/emp1, then she can't create share with name: TxHistory and uri /history/emp2 (or name: TxHistory2 and uri /history/emp1) but alice in /customer realm can create such share.  This method creates the share in AM first, then adds it to the IG LDAP.  If the method cannot create the entry in LDAP it attempts a compensating DELETE transaction in AM to maintain consistency
 ```
 curl -X POST \
   http://<OpenIG-Host:Port>/openig/api/system/objects/umaserviceext/share \
@@ -222,7 +222,7 @@ curl -X GET \
     "client_id": "OpenIG_RS"
 }
 ```
-* Delete specific share. Note that this requires <OpenIG-ResourceId> in REST URL. Note that this doesn't remove resource from OpenAM
+* Delete specific share. Note that this requires <OpenIG-ResourceId> in REST URL. This method attempts to find the share in IG LDAP first, then removes it from AM.  It uses the PAT passed in the call to attempt this, rather than the stored PAT.  If the removal from AM is successful, it will attempt removal of share from IG LDAP.  If at this point it fails to remove the share from IG LDAP the data will be inconsistent between IG LDAP and AM.
 ```
 curl -X DELETE \
   http://<OpenIG-Host:Port>/openig/api/system/objects/umaserviceext/share/<OpenIG-ResourceId> \

@@ -140,7 +140,7 @@ class ShareCollectionProviderExt implements CollectionResourceProvider {
 //
 //        //TODO Delete from OpenAM too
 //        return newResultPromise(newResourceResponse(resourceId, null, asJson(share)));
-        
+
         return service.removeShare(context, request, resourceId, userId)
                 .then(new Function<ShareExt, ResourceResponse, ResourceException>() {
                     @Override
