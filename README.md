@@ -7,11 +7,11 @@ OpenIG UMA Service and Filter Extensions for: <br />
 2. Extend OpenIG-UMA REST endpoint: Authentication using PAT <br /> 
 3. User friendly UMA Resource name <br />
 4. Persisting UMA ResourceSet id and PAT in OpenDJ <br />
+5. Removing share from AM using IG REST (uses PAT passed in header, rather than stored PAT) <br />
 
 These features are not currently supported in this extension: <br />
 1. Automatic refresh of PAT, handling expired PAT. We can use long-lived access tokens for testing purpose  <br />
 2. Resource share patterns <br />
-3. Remove share from AM using IG REST <br />
 
 
 Pre-requisites :

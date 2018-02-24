@@ -133,13 +133,26 @@ class ShareCollectionProviderExt implements CollectionResourceProvider {
             return new BadRequestException("Missing or expired PAT in request").asPromise();
         }
 
-        ShareExt share = service.removeShare(resourceId, userId);
-        if (share == null) {
-            return new NotFoundException(format("Share %s is unknown", resourceId)).asPromise();
-        }
-
-        //TODO Delete from OpenAM too
-        return newResultPromise(newResourceResponse(resourceId, null, asJson(share)));
+//        ShareExt share = service.removeShare(context, request, resourceId, userId);
+//        if (share == null) {
+//            return new NotFoundException(format("Share %s is unknown", resourceId)).asPromise();
+//        }
+//
+//        //TODO Delete from OpenAM too
+//        return newResultPromise(newResourceResponse(resourceId, null, asJson(share)));
+        
+        return service.removeShare(context, request, resourceId, userId)
+                .then(new Function<ShareExt, ResourceResponse, ResourceException>() {
+                    @Override
+                    public ResourceResponse apply(final ShareExt share) throws ResourceException {
+                        return newResourceResponse(share.getId(), null, asJson(share));
+                    }
+                }, new Function<UmaException, ResourceResponse, ResourceException>() {
+                    @Override
+                    public ResourceResponse apply(final UmaException exception) throws ResourceException {
+                        throw new BadRequestException("Failed to remove a share, Reason: " + exception.getMessage(), exception);
+                    }
+                });
     }
 
     @Override

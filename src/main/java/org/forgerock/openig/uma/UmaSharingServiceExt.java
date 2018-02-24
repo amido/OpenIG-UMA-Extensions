@@ -26,6 +26,7 @@ import org.forgerock.http.oauth2.OAuth2;
 import org.forgerock.http.protocol.*;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.resource.CreateRequest;
+import org.forgerock.json.resource.DeleteRequest;
 import org.forgerock.json.resource.http.HttpContext;
 import org.forgerock.opendj.ldap.LdapException;
 import org.forgerock.openig.heap.GenericHeaplet;
@@ -184,6 +185,7 @@ public class UmaSharingServiceExt {
                                 ldapManager.addShare(share);
                                 return share;
                             } catch (IOException e) {
+                                //attempt to delete the resource in Authz Server so that we are consistent with the LDAP
                                 if (resource_id !=null) {
                                     deleteResource(context, pat, resource_id);
                                 }
@@ -296,20 +298,32 @@ public class UmaSharingServiceExt {
      * @param shareId share identifier
      * @return the removed Share instance if found, {@code null} otherwise.
      */
-    public ShareExt removeShare(String shareId, final String userId) {
+    public Promise<ShareExt, UmaException> removeShare(final Context context, final DeleteRequest request, String shareId, final String userId) {
 
-        try {
-            ShareExt shareExt = getShare(shareId, userId);
-
-            if (null != shareExt) {
-                ldapManager.removeShare(shareId);
-            }
-            return shareExt;
-        } catch (LdapException e) {
-            return null;
+        ShareExt shareExt = getShare(shareId, userId);
+        if (shareExt != null) {
+           //delete share from Authz Server
+           return deleteResource(context, shareExt.getPAT(), shareExt.getResourceId())
+                    .then(new Function<Response, ShareExt, UmaException>() {
+                        @Override
+                        public ShareExt apply(final Response response) throws UmaException {
+                            if (response.getStatus() == Status.NO_CONTENT) {
+                                try {
+                                    ldapManager.removeShare(shareId);
+                                    return shareExt;
+                                } catch (LdapException e) {
+                                    throw new UmaException("Cannot remove resource from IG LDAP, but it has been removed from AS", e);
+                                }
+                            }
+                            throw new UmaException("Cannot remove resource from AS (so removal from IG LDAP not attempted): " + response.getEntity());
+                        }
+                    }, Responses.<ShareExt, UmaException>noopExceptionFunction());
         }
-
+        return newExceptionPromise(new UmaException(format("Share does not exist with _id: %s or user_id: %s ", shareId, userId)));
     }
+
+
+
 
     /**
      * Returns the {@link ShareExt} with the given {@code id}.
