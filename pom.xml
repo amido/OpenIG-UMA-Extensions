@@ -18,16 +18,16 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <groupId>org.forgerock.openig.ext</groupId>
-    <version>1.0</version>
+    <version>6.5</version>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>openig-uma-ext</artifactId>
     <name>OpenIG UMA Extensions</name>
 
     <properties>
-        <openig.version>5.5.0</openig.version>
-        <opendj.sdk.version>5.5.0</opendj.sdk.version>
-        <commons.version>22.0.0</commons.version>
+        <openig.version>6.5.0</openig.version>
+        <opendj.sdk.version>6.5.0</opendj.sdk.version>
+        <commons.version>24.0.1</commons.version>
     </properties>
 
     <repositories>
@@ -80,9 +80,10 @@
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
         </plugins>
