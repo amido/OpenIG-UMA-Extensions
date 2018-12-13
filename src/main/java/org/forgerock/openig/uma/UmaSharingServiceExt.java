@@ -234,6 +234,7 @@ public class UmaSharingServiceExt {
         request.setUri(resourceRegistrationEndpoint);
         request.getHeaders().put("Authorization", format("Bearer %s", pat));
         request.getHeaders().put("Accept", "application/json");
+        request.getHeaders().put("Accept-API-Version", "resource=1.0");
 
         request.setEntity(data.asMap());
 
@@ -248,6 +249,7 @@ public class UmaSharingServiceExt {
         request.setMethod("DELETE");
         request.setUri(authorizationServer.resolve(resourceRegistrationEndpoint.toString() + "/" + resource_id));
         request.getHeaders().put("Authorization", format("Bearer %s", pat));
+        request.getHeaders().put("Accept-API-Version", "resource=1.0");
 
         return protectionApiHandler.handle(context, request);
     }
